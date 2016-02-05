@@ -89,10 +89,12 @@
              {:dependencies [[figwheel "0.5.0-6"]
                              [figwheel-sidecar "0.5.0-6"]
                              [com.cemerick/piggieback "0.2.1"]
-                             [org.clojure/tools.nrepl "0.2.12"]]
+                             [org.clojure/tools.nrepl "0.2.12"]
+                             [expectations "2.1.4"]]
 
               :plugins [[lein-figwheel "0.5.0-6"]
-                        [lein-doo "0.1.6"]]
+                        [lein-doo "0.1.6"]
+                        [lein-autoexpect "1.7.0"]]
 
               :cljsbuild {:builds
                           {:test
