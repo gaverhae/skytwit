@@ -108,12 +108,16 @@
 
 (defn put-old-tweets-on-channel
   [creds screen-name chan]
-  (let [max-id (-> (get-user-profile creds screen-name) :last-tweet-id inc)]
+  (let [max-id (-> (get-user-profile creds screen-name) :last-tweet-id inc)
+        end? (atom false)]
     (go-loop [last-id max-id]
-             (let [next-batch (get-tweets-before-tweet-id creds screen-name last-id)]
-               (when (seq next-batch)
-                 (>! chan next-batch)
-                 (recur (:id (last next-batch))))))))
+             (when-not @end?
+               (let [next-batch (get-tweets-before-tweet-id
+                                  creds screen-name last-id)]
+                 (when (seq next-batch)
+                   (>! chan next-batch)
+                   (recur (:id (last next-batch)))))))
+    (fn [] (reset! end? true))))
 
 (defn put-new-tweets-on-channel
   [creds screen-name chan]
