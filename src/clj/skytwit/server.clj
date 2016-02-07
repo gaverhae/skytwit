@@ -41,33 +41,6 @@
      frequencies)
 )
 
-(comment
-  (def collected (atom []))
-
-  (def ctx (tapi/make-api-context "https" "stream.twitter.com" "1.1"))
-
-  (let [w (java.io.PipedWriter.)
-        r (java.io.PipedReader. w)]
-    (ts/statuses-filter :params {:track "InternetRadio"}
-                        :api-context ctx
-                        :oauth-creds credentials
-                        :callbacks (AsyncStreamingCallback.
-                                     (fn [_ body]
-                                       (io/copy (.toByteArray body) w))
-                                     (comp println twh/response-return-everything)
-                                     twh/exception-print))
-    (future
-      (->> (json/parsed-seq r true)
-           (map (fn [j]
-                  (swap! collected conj j)))
-           doall)))
-
-  (->> collected deref
-       (map (comp :hashtags :entities))
-       (mapcat #(map :text %))
-       frequencies)
-  )
-
 ;; Taken from Sente README
 (let [{:keys [ch-recv
               send-fn
@@ -95,6 +68,7 @@
                                   :params {:screen-name "InternetRadio"})
                    :body)]
       {:name (:screen_name user)
+       :id (:id user)
        :number-of-tweets (:statuses_count user)
        :last-tweet-id (-> user :status :id)})
     (catch Exception _ nil)))
@@ -117,7 +91,7 @@
                            (.. System out
                                (println (pr-str [:failure resp])))
                            (if (twh/rate-limit-error? @(:status resp))
-                             (do (Thread/sleep (20 * 1000))
+                             (do (Thread/sleep (60 * 1000))
                                  (rec))
                              (twh/response-throw-error resp)))
                          twh/exception-rethrow)))
@@ -139,12 +113,37 @@
                  (>! chan next-batch)
                  (recur (:id (last next-batch))))))))
 
+(defn put-new-tweets-on-channel
+  [creds screen-name chan]
+  (let [w (java.io.PipedWriter.)
+        r (java.io.PipedReader. w)
+        end? (atom false)
+        id (:id (get-user-profile creds screen-name))
+        s (ts/statuses-filter :params {:follow id}
+                              :oauth-creds creds
+                              :callbacks (AsyncStreamingCallback.
+                                           (fn [_ body]
+                                             (io/copy (.toByteArray body) w))
+                                           twh/response-throw-error
+                                           twh/exception-rethrow))
+        f (go-loop [s (json/parsed-seq r true)]
+                   (when-not @end?
+                     (>! chan (first s))
+                     (recur (rest s))))]
+    ;; TODO: There may be a small memory leak here: if statuses-filter
+    ;;       is stopped in the middle of a JSON string, the lazy seq may
+    ;;       be blocked and the go-block may not get GC'd.
+    (fn []
+      ((:cancel s))
+      (reset! end? true))))
+
 (comment
   (def creds (get-credentials-from-env))
   (def a (atom []))
 
   (let [ch (async/chan)]
-    (put-all-tweets-on-channel creds "_toch" ch)
+    #_(put-all-tweets-on-channel creds "_toch" ch)
+    (put-new-tweets-on-channel creds "InternetRadio" ch)
     (go-loop []
              (when-let [v (<! ch)]
                (swap! a concat v)
