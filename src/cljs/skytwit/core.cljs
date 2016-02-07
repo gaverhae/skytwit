@@ -28,20 +28,57 @@
          (println (:?data (<! ch-chsk)))
          (recur))
 
+(defn handle-change
+  [e owner {:keys [text]}]
+  (om/set-state! owner :text (.. e -target -value)))
+
+(defn send-twitter-handle
+  [n]
+  (chsk-send! [:post/change {:name n}]))
+
+(defn input-field
+  [data owner]
+  (reify
+    om/IInitState
+    (init-state [_] {:text ""})
+    om/IRenderState
+    (render-state [this state]
+      (dom/div nil
+               (dom/h2 nil "Enter a twitter handle")
+               (dom/div nil
+                        (dom/input
+                          #js {:type "text" :ref "twitter-handle"
+                               :value (:text state)
+                               :onChange #(handle-change % owner state)})
+                        (dom/button #js {:onClick #(send-twitter-handle (:text state))}
+                                    "Change handle")))))) 
+
+(defn statistics
+  [app owner]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/pre nil (pr-str (->> (:tweets app)
+                                (mapcat :hashtags)
+                                frequencies))))))
+
+(defn refresh
+  [app owner]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/button #js {:onClick #(chsk-send! [:get/update {}])}
+                  "Refresh data"))))
+
 (defn root-component [app owner]
   (reify
     om/IRender
     (render [_]
       (dom/div nil
                (dom/h1 nil (:user-name app))
-               (dom/pre nil (pr-str (->> (:tweets app)
-                                         (mapcat :hashtags)
-                                         frequencies)))
-               (dom/pre nil (pr-str app))
-               (dom/div #js {:onClick (fn []
-                                        (chsk-send! [:get/update {:msg "empty"}])
-                                        (js/alert "hello server"))}
-                        "click-me!")))))
+               (om/build input-field app)
+               (om/build statistics app)
+               (om/build refresh app)))))
 
 (om/root
  root-component
