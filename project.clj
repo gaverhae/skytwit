@@ -4,7 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :dependencies [[org.clojure/clojure "1.8.0-RC5"]
+  :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.7.228" :scope "provided"]
                  [ring "1.4.0"]
                  [ring/ring-defaults "0.1.5"]
@@ -13,7 +13,11 @@
                  [compojure "1.4.0"]
                  [org.omcljs/om "1.0.0-alpha28"]
                  [environ "1.0.2"]
-                 [twitter-api "0.7.8"]]
+                 [twitter-api "0.7.8"]
+
+                 ;; Manually resolve conflicts in transitive dependencies
+                 [commons-codec "1.10"]
+                 [log4j "1.2.17"]]
 
   :plugins [[lein-cljsbuild "1.1.1"]
             [lein-environ "1.0.1"]]
