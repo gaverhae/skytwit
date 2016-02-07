@@ -10,7 +10,11 @@
             [twitter.oauth :as oauth]
             [twitter.callbacks :as cb]
             [twitter.callbacks.handlers :as twh]
-            [twitter.api.restful :as tr])
+            [twitter.api :as tapi]
+            [twitter.api.restful :as tr]
+            [twitter.api.streaming :as ts]
+            [cheshire.core :as json])
+  (:import (twitter.callbacks.protocols AsyncStreamingCallback))
   (:gen-class))
 
 (def credentials (oauth/make-oauth-creds (env :oauth-consumer-key)
@@ -28,6 +32,33 @@
      (mapcat #(map :text %))
      frequencies)
 )
+
+(comment
+  (def collected (atom []))
+
+  (def ctx (tapi/make-api-context "https" "stream.twitter.com" "1.1"))
+
+  (let [w (java.io.PipedWriter.)
+        r (java.io.PipedReader. w)]
+    (ts/statuses-filter :params {:track "InternetRadio"}
+                        :api-context ctx
+                        :oauth-creds credentials
+                        :callbacks (AsyncStreamingCallback.
+                                     (fn [_ body]
+                                       (io/copy (.toByteArray body) w))
+                                     (comp println twh/response-return-everything)
+                                     twh/exception-print))
+    (future
+      (->> (json/parsed-seq r true)
+           (map (fn [j]
+                  (swap! collected conj j)))
+           doall)))
+
+  (->> collected deref
+       (map (comp :hashtags :entities))
+       (mapcat #(map :text %))
+       frequencies)
+  )
 
 (defroutes routes
   (GET "/" _
