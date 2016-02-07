@@ -6,8 +6,28 @@
             [ring.middleware.gzip :refer [wrap-gzip]]
             [ring.middleware.logger :refer [wrap-with-logger]]
             [environ.core :refer [env]]
-            [ring.adapter.jetty :refer [run-jetty]])
+            [ring.adapter.jetty :refer [run-jetty]]
+            [twitter.oauth :as oauth]
+            [twitter.callbacks :as cb]
+            [twitter.callbacks.handlers :as twh]
+            [twitter.api.restful :as tr])
   (:gen-class))
+
+(def credentials (oauth/make-oauth-creds (env :oauth-consumer-key)
+                                         (env :oauth-consumer-secret)
+                                         (env :oauth-app-key)
+                                         (env :oauth-app-secret)))
+
+(comment
+(->> (tr/statuses-user-timeline
+       :oauth-creds credentials
+       :params {:screen-name "AdamJWynne"})
+     :body
+     (map (comp :hashtags :entities))
+     (remove empty?)
+     (mapcat #(map :text %))
+     frequencies)
+)
 
 (defroutes routes
   (GET "/" _
