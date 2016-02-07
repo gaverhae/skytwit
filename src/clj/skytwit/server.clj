@@ -136,18 +136,24 @@
 (defn start-listening-on-user!
   [creds screen-name at]
   (let [ch (async/chan)
+        uid (:id (get-user-profile creds screen-name))
         stop-old (put-old-tweets-on-channel creds screen-name ch)
-        stop-new (put-new-tweets-on-channel creds screen-name ch)]
+        stop-new (put-new-tweets-on-channel creds screen-name ch)
+        stop-fn (fn [] (stop-old) (stop-new))]
+    (if-let [stop-previous (:stop-fn @at)] (stop-previous))
+    (reset! at {:user-name screen-name
+                :user-id uid
+                :stop-fn stop-fn
+                :tweets []})
     (go-loop []
              (when-let [tweets (<! ch)]
-               (swap! at update :tweets concat tweets)))
-    (fn []
-      (stop-old)
-      (stop-new))))
+               (->> tweets
+                    (filter #(= (:user %) uid))
+                    (swap! at update :tweets concat))))))
 
 (comment
   (def creds (get-credentials-from-env))
-  (def a (atom []))
+  (def a (atom {}))
 
   (def stop-fn (start-listening-on-user! creds "_toch" a))
   (stop-fn)
@@ -170,6 +176,20 @@
       wrap-with-logger
       wrap-gzip))
 
+(defn start-ws-server
+  [creds]
+  (let [state (atom {})]
+    (go-loop
+      []
+      (let [[t b] (<! ch-chsk)]
+        (case t
+          :post/change (start-listening-on-user! creds (:name b) state)
+          :get/update (chsk-send!
+                        1 [:data/full
+                           (select-keys @state [:user-name :tweets])])))
+      (recur))))
+
 (defn -main [& [port]]
-  (let [port (Integer. (or port (env :port) 10555))]
+  (let [port (Integer. (or port (env :port) 10555))
+        creds (get-credentials-from-env)]
     (run-server http-handler {:port port :join? false})))

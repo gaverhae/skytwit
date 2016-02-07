@@ -12,6 +12,7 @@
   (wrap-reload #'skytwit.server/http-handler))
 
 (defn run []
+  (skytwit.server/start-ws-server (skytwit.server/get-credentials-from-env))
   (figwheel/start-figwheel!))
 
 (def browser-repl figwheel/cljs-repl)
