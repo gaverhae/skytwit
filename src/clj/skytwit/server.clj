@@ -106,7 +106,7 @@
       (rest tweets)
       tweets)))
 
-(defn put-all-tweets-on-channel
+(defn put-old-tweets-on-channel
   [creds screen-name chan]
   (let [max-id (-> (get-user-profile creds screen-name) :last-tweet-id inc)]
     (go-loop [last-id max-id]
@@ -144,7 +144,7 @@
   (def a (atom []))
 
   (let [ch (async/chan)]
-    #_(put-all-tweets-on-channel creds "_toch" ch)
+    #_(put-old-tweets-on-channel creds "_toch" ch)
     (put-new-tweets-on-channel creds "InternetRadio" ch)
     (go-loop []
              (when-let [v (<! ch)]
