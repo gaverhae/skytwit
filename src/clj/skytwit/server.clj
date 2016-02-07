@@ -147,16 +147,6 @@
                     (filter #(= (:user %) uid))
                     (swap! at update :tweets concat))))))
 
-(comment
-  (def creds (get-credentials-from-env))
-  (def a (atom {}))
-
-  (def stop-fn (start-listening-on-user! creds "_toch" a))
-  (stop-fn)
-
-  (-> a deref)
-  )
-
 (defroutes routes
   (GET "/" _
     {:status 200
@@ -183,11 +173,12 @@
           :get/update (chsk-send!
                         1 [:data/full
                            (select-keys @state [:user-name :tweets])])
-          ;; TODO: log unmatched messages
-          nil))
+          ;; TODO: better logging
+          (prn [:unhandled [t b]])))
       (recur))))
 
 (defn -main [& [port]]
   (let [port (Integer. (or port (env :port) 10555))
         creds (get-credentials-from-env)]
+    (start-ws-server creds)
     (run-server http-handler {:port port :join? false})))

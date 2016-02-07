@@ -19,14 +19,9 @@
   )
 
 (defonce app-state
-  (atom {:user-name "gaverhae"
-         :number-of-tweets 3
-         :tweets [{:hashtags ["a" "b"]}
-                  {:hashtags ["a"]}]}))
-
-(go-loop []
-         (println (:?data (<! ch-chsk)))
-         (recur))
+  (atom {:user-name "placeholder"
+         :tweets [{:tags ["a" "b"]}
+                  {:tags ["a"]}]}))
 
 (defn handle-change
   [e owner {:keys [text]}]
@@ -59,7 +54,7 @@
     om/IRender
     (render [_]
       (dom/pre nil (pr-str (->> (:tweets app)
-                                (mapcat :hashtags)
+                                (mapcat :tags)
                                 frequencies))))))
 
 (defn refresh
@@ -79,6 +74,16 @@
                (om/build input-field app)
                (om/build statistics app)
                (om/build refresh app)))))
+
+(go-loop []
+         (let [e (:event (<! ch-chsk))]
+           (when (= :chsk/recv (first e))
+             (let [[t b] (second e)]
+               (condp = t
+                 :data/full (reset! app-state b)
+                 ;; TODO: better logging
+                 (prn [:unhandled [t b]])))))
+         (recur))
 
 (om/root
  root-component
