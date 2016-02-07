@@ -46,7 +46,7 @@
                                :value (:text state)
                                :onChange #(handle-change % owner state)})
                         (dom/button #js {:onClick #(send-twitter-handle (:text state))}
-                                    "Change handle")))))) 
+                                    "Start collecting data"))))))
 
 (defn statistics
   [app owner]
@@ -63,15 +63,16 @@
     om/IRender
     (render [_]
       (dom/button #js {:onClick #(chsk-send! [:get/update {}])}
-                  "Refresh data"))))
+                  "Update report"))))
 
 (defn root-component [app owner]
   (reify
     om/IRender
     (render [_]
-      (dom/div nil
+      (dom/div #js {}
                (dom/h1 nil (:user-name app))
                (om/build input-field app)
+               (dom/h2 nil "Report")
                (om/build statistics app)
                (om/build refresh app)))))
 
