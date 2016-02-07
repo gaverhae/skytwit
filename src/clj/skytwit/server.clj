@@ -29,18 +29,6 @@
                           (env :oauth-app-key)
                           (env :oauth-app-secret)))
 
-(comment
-  (def credentials (get-credentials-from-env))
-(->> (tr/statuses-user-timeline
-       :oauth-creds credentials
-       :params {:screen-name "AdamJWynne"})
-     :body
-     (map (comp :hashtags :entities))
-     (remove empty?)
-     (mapcat #(map :text %))
-     frequencies)
-)
-
 ;; Taken from Sente README
 (let [{:keys [ch-recv
               send-fn
