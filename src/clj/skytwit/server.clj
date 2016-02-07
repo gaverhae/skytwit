@@ -16,16 +16,20 @@
             [cheshire.core :as json]
             [taoensso.sente :as sente]
             [taoensso.sente.server-adapters.http-kit
-             :refer [sente-web-server-adapter]])
+             :refer [sente-web-server-adapter]]
+            [clojure.core.async :as async :refer [go go-loop >! <!]])
   (:import (twitter.callbacks.protocols AsyncStreamingCallback))
   (:gen-class))
 
-(def credentials (oauth/make-oauth-creds (env :oauth-consumer-key)
-                                         (env :oauth-consumer-secret)
-                                         (env :oauth-app-key)
-                                         (env :oauth-app-secret)))
+(defn get-credentials-from-env
+  []
+  (oauth/make-oauth-creds (env :oauth-consumer-key)
+                          (env :oauth-consumer-secret)
+                          (env :oauth-app-key)
+                          (env :oauth-app-secret)))
 
 (comment
+  (def credentials (get-credentials-from-env))
 (->> (tr/statuses-user-timeline
        :oauth-creds credentials
        :params {:screen-name "AdamJWynne"})
@@ -80,8 +84,48 @@
   )
 
 (comment
-(chsk-send! 1 {:text "hello"})
+(chsk-send! 1 [:a/ping "hello"])
 )
+
+(comment
+
+  (def creds (get-credentials-from-env))
+
+  (try
+    (let [user (-> (tr/users-show :oauth-creds creds
+                                  :params {:screen-name "InternetRadio"})
+                   :body)]
+      {:name (:screen_name user)
+       :number-of-tweets (:statuses_count user)
+       :last-tweet-id (-> user :status :id)})
+    (catch Exception _ nil))
+  {:name "InternetRadio",
+   :number-of-tweets 3787133,
+   :last-tweet-id 696388911019462656}
+
+  (->> (tr/statuses-user-timeline :oauth-creds creds
+                                  :params {:screen-name "InternetRadio"
+                                           :max-id 696388911019462656
+                                           :trim-user true
+                                           :exclude-replies true
+                                           :count 200})
+      :body (map :id))
+
+  )
+
+(defn get-tweets-before-tweet-id
+  [creds screen-name id]
+  (let [tweets (->> (tr/statuses-user-timeline :oauth-creds creds
+                                               :params {:screen-name screen-name
+                                                        :max-id id
+                                                        :trim-user true
+                                                        :exclude-replies true
+                                                        :count 200})
+                    :body (map (juxt :id (comp (partial mapv :text)
+                                               :hashtags :entities))))]
+    (if (= id (ffirst tweets))
+      (rest tweets)
+      tweets)))
 
 (defroutes routes
   (GET "/" _
