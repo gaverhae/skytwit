@@ -130,7 +130,7 @@
     ;;       is stopped in the middle of a JSON string, the lazy seq may
     ;;       be blocked and the go-block may not get GC'd.
     (fn []
-      ((:cancel s))
+      ((:cancel (meta s)))
       (reset! end? true))))
 
 (comment
