@@ -18,7 +18,8 @@
             [taoensso.sente.server-adapters.http-kit
              :refer [sente-web-server-adapter]]
             [clojure.core.async :as async :refer [go go-loop >! <!]])
-  (:import (twitter.callbacks.protocols AsyncStreamingCallback))
+  (:import (twitter.callbacks.protocols AsyncStreamingCallback
+                                        SyncSingleCallback))
   (:gen-class))
 
 (defn get-credentials-from-env
@@ -100,17 +101,57 @@
 
 (defn get-tweets-before-tweet-id
   [creds screen-name id]
-  (let [tweets (->> (tr/statuses-user-timeline :oauth-creds creds
-                                               :params {:screen-name screen-name
-                                                        :max-id id
-                                                        :trim-user true
-                                                        :exclude-replies true
-                                                        :count 200})
-                    :body (map (juxt :id (comp (partial mapv :text)
-                                               :hashtags :entities))))]
-    (if (= id (ffirst tweets))
+  (let [get-raw-tweets
+        (fn rec []
+          (tr/statuses-user-timeline
+            :oauth-creds creds
+            :params {:screen-name screen-name
+                     :max-id id
+                     :trim-user true
+                     :exclude-replies true
+                     :count 200}
+            :callbacks (SyncSingleCallback.
+                         twh/response-return-body
+                         (fn [resp]
+                           ;; TODO: Proper logging
+                           (.. System out
+                               (println (pr-str [:failure resp])))
+                           (if (twh/rate-limit-error? @(:status resp))
+                             (do (Thread/sleep (20 * 1000))
+                                 (rec))
+                             (twh/response-throw-error resp)))
+                         twh/exception-rethrow)))
+        tweets (->> (get-raw-tweets)
+                    (map (fn [m]
+                           {:id (:id m)
+                            :tags (->> m :entities :hashtags
+                                       (mapv :text))})))]
+    (if (= id (:id (first tweets)))
       (rest tweets)
       tweets)))
+
+(defn put-all-tweets-on-channel
+  [creds screen-name chan]
+  (let [max-id (-> (get-user-profile creds screen-name) :last-tweet-id inc)]
+    (go-loop [last-id max-id]
+             (let [next-batch (get-tweets-before-tweet-id creds screen-name last-id)]
+               (when (seq next-batch)
+                 (>! chan next-batch)
+                 (recur (:id (last next-batch))))))))
+
+(comment
+  (def creds (get-credentials-from-env))
+  (def a (atom []))
+
+  (let [ch (async/chan)]
+    (put-all-tweets-on-channel creds "_toch" ch)
+    (go-loop []
+             (when-let [v (<! ch)]
+               (swap! a concat v)
+               (recur))))
+
+  (-> a deref count)
+  )
 
 (defroutes routes
   (GET "/" _
