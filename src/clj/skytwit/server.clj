@@ -13,7 +13,10 @@
             [twitter.api :as tapi]
             [twitter.api.restful :as tr]
             [twitter.api.streaming :as ts]
-            [cheshire.core :as json])
+            [cheshire.core :as json]
+            [taoensso.sente :as sente]
+            [taoensso.sente.server-adapters.http-kit
+             :refer [sente-web-server-adapter]])
   (:import (twitter.callbacks.protocols AsyncStreamingCallback))
   (:gen-class))
 
@@ -60,11 +63,33 @@
        frequencies)
   )
 
+;; Taken from Sente README
+(let [{:keys [ch-recv
+              send-fn
+              ajax-post-fn
+              ajax-get-or-ws-handshake-fn
+              connected-uids]}
+            (sente/make-channel-socket!
+              sente-web-server-adapter
+              {:user-id-fn (fn [& args] 1)})]
+  (def ring-ajax-post                ajax-post-fn)
+  (def ring-ajax-get-or-ws-handshake ajax-get-or-ws-handshake-fn)
+  (def ch-chsk                       ch-recv) ; ChannelSocket's receive channel
+  (def chsk-send!                    send-fn) ; ChannelSocket's send API fn
+  (def connected-uids                connected-uids) ; Watchable, read-only atom
+  )
+
+(comment
+(chsk-send! 1 {:text "hello"})
+)
+
 (defroutes routes
   (GET "/" _
     {:status 200
      :headers {"Content-Type" "text/html; charset=utf-8"}
      :body (io/input-stream (io/resource "public/index.html"))})
+  (GET  "/chsk" req (ring-ajax-get-or-ws-handshake req))
+  (POST "/chsk" req (ring-ajax-post                req))
   (resources "/"))
 
 (def http-handler
