@@ -74,8 +74,9 @@
     (catch Exception _ nil)))
 
 (defn format-tweet
-  [t]
-  {:id (:id t)
+  [t uid]
+  {:user uid
+   :id (:id t)
    :tags (->> t :entities :hashtags (mapv :text))})
 
 (defn get-tweets-before-tweet-id
@@ -100,8 +101,9 @@
                                  (rec))
                              (twh/response-throw-error resp)))
                          twh/exception-rethrow)))
+        uid (:id (get-user-profile creds screen-name))
         tweets (->> (get-raw-tweets)
-                    (map format-tweet))]
+                    (map #(format-tweet % uid)))]
     (if (= id (:id (first tweets)))
       (rest tweets)
       tweets)))
@@ -134,7 +136,7 @@
                                            twh/exception-rethrow))
         f (go-loop [s (json/parsed-seq r true)]
                    (when-not @end?
-                     (>! chan [(format-tweet (first s))])
+                     (>! chan [(format-tweet (first s) id)])
                      (recur (rest s))))]
     ;; TODO: There may be a small memory leak here: if statuses-filter
     ;;       is stopped in the middle of a JSON string, the lazy seq may
