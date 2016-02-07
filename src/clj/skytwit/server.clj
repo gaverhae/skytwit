@@ -45,10 +45,6 @@
   (def connected-uids                connected-uids) ; Watchable, read-only atom
   )
 
-(comment
-(chsk-send! 1 [:a/ping "hello"])
-)
-
 (defn get-user-profile
   [creds screen-name]
   (try
@@ -181,12 +177,14 @@
   (let [state (atom {})]
     (go-loop
       []
-      (let [[t b] (<! ch-chsk)]
+      (let [{[t b] :event} (<! ch-chsk)]
         (case t
           :post/change (start-listening-on-user! creds (:name b) state)
           :get/update (chsk-send!
                         1 [:data/full
-                           (select-keys @state [:user-name :tweets])])))
+                           (select-keys @state [:user-name :tweets])])
+          ;; TODO: log unmatched messages
+          nil))
       (recur))))
 
 (defn -main [& [port]]

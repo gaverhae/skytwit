@@ -37,7 +37,11 @@
                (dom/pre nil (pr-str (->> (:tweets app)
                                          (mapcat :hashtags)
                                          frequencies)))
-               (dom/pre nil (pr-str app))))))
+               (dom/pre nil (pr-str app))
+               (dom/div #js {:onClick (fn []
+                                        (chsk-send! [:get/update {:msg "empty"}])
+                                        (js/alert "hello server"))}
+                        "click-me!")))))
 
 (om/root
  root-component
