@@ -6,6 +6,7 @@
 
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.228" :scope "provided"]
+                 [http-kit "2.1.19"]
                  [ring "1.4.0"]
                  [ring/ring-defaults "0.1.5"]
                  [bk/ring-gzip "0.1.1"]
@@ -14,6 +15,7 @@
                  [org.omcljs/om "1.0.0-alpha28"]
                  [environ "1.0.2"]
                  [twitter-api "0.7.8"]
+                 [com.taoensso/sente "1.7.0"]
 
                  ;; Manually resolve conflicts in transitive dependencies
                  [commons-codec "1.10"]
