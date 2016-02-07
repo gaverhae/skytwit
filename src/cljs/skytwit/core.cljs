@@ -57,14 +57,6 @@
                                 (mapcat :tags)
                                 frequencies))))))
 
-(defn refresh
-  [app owner]
-  (reify
-    om/IRender
-    (render [_]
-      (dom/button #js {:onClick #(chsk-send! [:get/update {}])}
-                  "Update report"))))
-
 (defn root-component [app owner]
   (reify
     om/IRender
@@ -73,17 +65,19 @@
                (dom/h1 nil (:user-name app))
                (om/build input-field app)
                (dom/h2 nil "Report")
-               (om/build statistics app)
-               (om/build refresh app)))))
+               (om/build statistics app)))))
 
 (go-loop []
-         (let [e (:event (<! ch-chsk))]
-           (when (= :chsk/recv (first e))
-             (let [[t b] (second e)]
-               (condp = t
-                 :data/full (reset! app-state b)
-                 ;; TODO: better logging
-                 (prn [:unhandled [t b]])))))
+         (asyncm/alt!
+           (async/timeout 200) (chsk-send! [:get/update {}])
+           ch-chsk ([data]
+                    (let [e (:event data)]
+                      (when (= :chsk/recv (first e))
+                        (let [[t b] (second e)]
+                          (condp = t
+                            :data/full (reset! app-state b)
+                            ;; TODO: better logging
+                            (prn [:unhandled [t b]])))))))
          (recur))
 
 (om/root
