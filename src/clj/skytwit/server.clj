@@ -133,19 +133,26 @@
       ((:cancel (meta s)))
       (reset! end? true))))
 
+(defn start-listening-on-user!
+  [creds screen-name at]
+  (let [ch (async/chan)
+        stop-old (put-old-tweets-on-channel creds screen-name ch)
+        stop-new (put-new-tweets-on-channel creds screen-name ch)]
+    (go-loop []
+             (when-let [tweets (<! ch)]
+               (swap! at update :tweets concat tweets)))
+    (fn []
+      (stop-old)
+      (stop-new))))
+
 (comment
   (def creds (get-credentials-from-env))
   (def a (atom []))
 
-  (let [ch (async/chan)]
-    #_(put-old-tweets-on-channel creds "_toch" ch)
-    (put-new-tweets-on-channel creds "InternetRadio" ch)
-    (go-loop []
-             (when-let [v (<! ch)]
-               (swap! a concat v)
-               (recur))))
+  (def stop-fn (start-listening-on-user! creds "_toch" a))
+  (stop-fn)
 
-  (-> a deref count)
+  (-> a deref)
   )
 
 (defroutes routes
