@@ -135,7 +135,7 @@
         uid (:id (get-user-profile creds screen-name))
         stop-old (put-old-tweets-on-channel creds screen-name ch)
         stop-new (put-new-tweets-on-channel creds screen-name ch)
-        stop-fn (fn [] (stop-old) (stop-new))]
+        stop-fn (fn [] (stop-old) (stop-new) (async/close! ch))]
     (if-let [stop-previous (:stop-fn @at)] (stop-previous))
     (reset! at {:user-name screen-name
                 :user-id uid
