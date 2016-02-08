@@ -1,5 +1,56 @@
 # skytwit
 
+This is a learning project (like
+[wikidump](https://github.com/gaverhae/wikidump)); its goal is for me to
+explore a few technologies, including ClojureScript, Om, and the Twitter API.
+Like wikidump, I urge you to not try to use this code for anything serious.
+
+As it is now, it is a simple web page where you can enter a Twitter handle and
+get a nice graph of that user's hashtag frequencies. At the time of working,
+the very basic version of that works, though there's still room for a ton of
+improvement. I probably won't touch this project for a week or so, so here are
+some notes to my future self:
+
+* It's still not entirely clear for me how
+  [twitter-api](https://github.com/adamwynne/twitter-api) expects the user to
+  actually handle errors. While it's clear that it has to do with the
+  `:callbacks` option, it's really not clear how they work. Once I figure that
+  out, maybe I should try to submit pull requests on the twitter-api project
+  with additional documentation.
+* Once errors are handled, it would be nice if they could be somehow propagated
+  to the end user where it makes sense.
+* An easier improvement would be to put some indication of the total progress
+  on the web page: the Twitter API can tell me how many tweets a user has, and
+  I can easily count the ones I have already fetched, so I should be able to
+  display some kind of progress bar on that front.
+* One of the main source of errors is "Rate limit exceeded"; while it is not so
+  hard to understand and circumvent for the REST endpoint, I have no clear idea
+  of chat it means or how to work around it for the streaming endpoint. I
+  imagine more research would be needed there.
+* Speaking of which, a nice improvement to the REST API stuff would be to use
+  core.async to throttle the request rate, which could ensure that the rate
+  limit is never reached (is it better than bursting through it and then
+  handling the errors?).
+* Adding tests. This may be linked to the rate throttling idea, but at this
+  point there are no tests and I have no idea how to add any valuable one.
+  Maybe if I hide the Twitter API behind core.async channels I will be able to
+  both test the rest of the application (mocking the other side of a channel
+  should be easy) and throttle the connection? That may also work for the
+  communication between the Clojure and ClojureScript apps.
+* Find out how to connect Fireplace to the browser REPL. I really miss the
+  interactivity.
+* Maybe explore Sente a bit more and think about allowing different users to
+  look at different data? At the moment, everyone connected to the same server
+  will see the same data and change it for everyone else. I am not sure how that
+  would work with the (very strict) API rate limits, though. Maybe once I have
+  finished throttling. Or maybe allow the users to authenticate, so they use
+  their own limits rather than mine? Not even sure that can work, but it would
+  be worth investigating.
+* The design of the web page could obviously be much better.
+
+>
+> The rest of this README is still the stock Chestnut README.
+>
 
 ## Development
 
