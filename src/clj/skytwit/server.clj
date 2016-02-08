@@ -145,7 +145,8 @@
              (when-let [tweets (<! ch)]
                (->> tweets
                     (filter #(= (:user %) uid))
-                    (swap! at update :tweets concat))))))
+                    (swap! at update :tweets concat))
+               (recur)))))
 
 (defroutes routes
   (GET "/" _
