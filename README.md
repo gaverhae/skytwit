@@ -48,11 +48,24 @@ some notes to my future self:
   be worth investigating.
 * The design of the web page could obviously be much better.
 
+## Development
+
+The app needs a few environment variables to run (even for development), so it
+should be started with:
+
+
+```bash
+TWITTER_HANDLE=your-handle \
+OAUTH_APP_KEY="an-app-token" \
+OAUTH_APP_SECRET="an-app-secret" \
+OAUTH_CONSUMER_KEY="a-consumer-key" \
+OAUTH_CONSUMER_SECRET="a-consumer-secret" \
+lein repl
+```
+
 >
 > The rest of this README is still the stock Chestnut README.
 >
-
-## Development
 
 Open a terminal and type `lein repl` to start a Clojure REPL
 (interactive prompt).
