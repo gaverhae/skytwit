@@ -16,6 +16,7 @@
                  [environ "1.0.2"]
                  [twitter-api "0.7.8"]
                  [com.taoensso/sente "1.7.0"]
+                 [cljsjs/dimple "2.1.2-0"]
 
                  ;; Manually resolve conflicts in transitive dependencies
                  [commons-codec "1.10"]

@@ -3,7 +3,8 @@
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [cljs.core.async :as async :refer (<! >! put! chan)]
-            (taoensso.sente :as sente :refer [cb-success?])))
+            (taoensso.sente :as sente :refer [cb-success?])
+            [cljsjs.dimple]))
 
 (enable-console-print!)
 
@@ -20,7 +21,7 @@
 
 (defonce app-state
   (atom {:user-name "placeholder"
-         :tweets [{:tags ["a" "b"]}
+         :tweets [{:tags ["a" "b"]} {:tags ["a" "c"]}
                   {:tags ["a"]}]}))
 
 (defn handle-change
@@ -48,14 +49,42 @@
                         (dom/button #js {:onClick #(send-twitter-handle (:text state))}
                                     "Start collecting data"))))))
 
+;; Originally taken from https://github.com/omcljs/om-cookbook/tree/master/recipes/dimple-bar-chart
+(defn- draw-chart
+  [{:keys [data width height id]}]
+  (let [svg (.newSvg js/dimple (str "#" id) "100%" 600)
+        Chart (.-chart js/dimple)
+        dimple-chart (Chart. svg data)
+        _ (.addMeasureAxis dimple-chart "x" "y")
+        _ (.addCategoryAxis dimple-chart "y" "x")
+        _ (.addSeries dimple-chart nil js/dimple.plot.bar)]
+    (.draw dimple-chart)))
+
 (defn statistics
   [app owner]
+  (let [opts {:data (->> (:tweets app)
+                         (mapcat :tags)
+                         frequencies
+                         (sort-by val)
+                         (mapv (fn [[x y]] {"x" x "y" y}))
+                         clj->js)
+              :id "report-chart"
+              :width "100%"
+              :height 600}]
   (reify
+    om/IDidMount
+    (did-mount [_] (draw-chart opts))
+    om/IDidUpdate
+    (did-update [_ _ _]
+      (let [n (.getElementById js/document (:id opts))]
+        (while (.hasChildNodes n)
+          (.removeChild n (.-lastChild n))))
+      (draw-chart opts))
     om/IRender
     (render [_]
-      (dom/pre nil (pr-str (->> (:tweets app)
-                                (mapcat :tags)
-                                frequencies))))))
+        (dom/div #js {:width (:width opts)
+                      :height (:height opts)
+                      :id (:id opts)})))))
 
 (defn root-component [app owner]
   (reify
