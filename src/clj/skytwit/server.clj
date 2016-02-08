@@ -165,6 +165,7 @@
 (defn start-ws-server
   [creds]
   (let [state (atom {})]
+    (start-listening-on-user! creds "gaverhae" state)
     (go-loop
       []
       (let [{[t b] :event} (<! ch-chsk)]
