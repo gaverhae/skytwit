@@ -52,7 +52,7 @@
 ;; Originally taken from https://github.com/omcljs/om-cookbook/tree/master/recipes/dimple-bar-chart
 (defn- draw-chart
   [{:keys [data width height id]}]
-  (let [svg (.newSvg js/dimple (str "#" id) "100%" 600)
+  (let [svg (.newSvg js/dimple (str "#" id) "100%" 400)
         Chart (.-chart js/dimple)
         dimple-chart (Chart. svg data)
         _ (.addMeasureAxis dimple-chart "x" "y")
@@ -65,7 +65,8 @@
   (let [opts {:data (->> (:tweets app)
                          (mapcat :tags)
                          frequencies
-                         (sort-by val)
+                         (sort-by (comp - val))
+                         (take 20)
                          (mapv (fn [[x y]] {"x" x "y" y}))
                          clj->js)
               :id "report-chart"
@@ -82,9 +83,9 @@
       (draw-chart opts))
     om/IRender
     (render [_]
-        (dom/div #js {:width (:width opts)
-                      :height (:height opts)
-                      :id (:id opts)})))))
+      (dom/div #js {:width (:width opts)
+                    :height (:height opts)
+                    :id (:id opts)})))))
 
 (defn root-component [app owner]
   (reify
