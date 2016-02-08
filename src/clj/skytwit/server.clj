@@ -101,8 +101,8 @@
                (let [next-batch (get-tweets-before-tweet-id
                                   creds screen-name last-id)]
                  (when (seq next-batch)
-                   (>! chan next-batch)
-                   (recur (:id (last next-batch)))))))
+                   (if (>! chan next-batch)
+                     (recur (:id (last next-batch))))))))
     (fn [] (reset! end? true))))
 
 (defn put-new-tweets-on-channel
@@ -120,8 +120,8 @@
                                            twh/exception-rethrow))
         f (go-loop [s (json/parsed-seq r true)]
                    (when-not @end?
-                     (>! chan [(format-tweet (first s) id)])
-                     (recur (rest s))))]
+                     (if (>! chan [(format-tweet (first s) id)])
+                       (recur (rest s)))))]
     ;; TODO: There may be a small memory leak here: if statuses-filter
     ;;       is stopped in the middle of a JSON string, the lazy seq may
     ;;       be blocked and the go-block may not get GC'd.
